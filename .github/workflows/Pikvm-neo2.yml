@@ -10,16 +10,21 @@ permissions:
 
 
 env:
+
   BOARD: nanopineo2
-  BRANCH: current
+  BRANCH: legacy
   RELEASE: jammy
+
   BUILD_MINIMAL: no
   BUILD_DESKTOP: no
+  KERNEL_CONFIGURE: no
 
 
 jobs:
 
+
   build:
+
 
     runs-on: ubuntu-22.04
 
@@ -32,16 +37,23 @@ jobs:
 
 
 
-    - name: Prepare build environment
+    # Enable ARM64 build support
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+
+
+
+    - name: Prepare build host
       run: |
 
         sudo apt update
 
         sudo apt install -y \
           git \
-          curl \
           wget \
-          aria2
+          curl \
+          aria2 \
+          jq
 
 
 
@@ -55,20 +67,26 @@ jobs:
 
 
 
-    - name: Copy PiKVM customize script
+    - name: Add PiKVM customize script
       run: |
 
         mkdir -p build/userpatches
+
 
         cp \
         userpatches/customize-image.sh \
         build/userpatches/customize-image.sh
 
 
+        chmod +x \
+        build/userpatches/customize-image.sh
 
-    - name: Build Armbian image
+
+
+    - name: Build Armbian NanoPi Neo2
       id: build
       run: |
+
 
         cd build
 
@@ -79,7 +97,7 @@ jobs:
           RELEASE=${RELEASE} \
           BUILD_MINIMAL=${BUILD_MINIMAL} \
           BUILD_DESKTOP=${BUILD_DESKTOP} \
-          KERNEL_CONFIGURE=no
+          KERNEL_CONFIGURE=${KERNEL_CONFIGURE}
 
 
         echo "status=success" >> $GITHUB_OUTPUT
@@ -90,17 +108,20 @@ jobs:
       if: steps.build.outputs.status == 'success'
       run: |
 
+
         cd build/output/images
 
+
         tar -Jcvf \
-        /tmp/nanopi_neo2_pikvm.tar.xz \
-        *.img
+          /tmp/nanopi_neo2_pikvm.tar.xz \
+          *.img
 
 
 
     - name: Upload artifact
       if: steps.build.outputs.status == 'success'
       uses: actions/upload-artifact@v4
+
 
       with:
 
@@ -110,15 +131,18 @@ jobs:
 
 
 
+
     - name: Create release
       if: steps.build.outputs.status == 'success'
       uses: softprops/action-gh-release@v2
+
 
       with:
 
         tag_name: nano-${{ github.run_number }}
 
         files: /tmp/nanopi_neo2_pikvm.tar.xz
+
 
       env:
 
