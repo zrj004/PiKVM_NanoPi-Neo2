@@ -1,0 +1,125 @@
+name: Build PiKVM NanoPi Neo2
+
+
+on:
+  workflow_dispatch:
+
+
+permissions:
+  contents: write
+
+
+env:
+  BOARD: nanopineo2
+  BRANCH: current
+  RELEASE: jammy
+  BUILD_MINIMAL: no
+  BUILD_DESKTOP: no
+
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-22.04
+
+
+    steps:
+
+
+    - name: Checkout PiKVM_NanoPi-Neo2
+      uses: actions/checkout@v4
+
+
+
+    - name: Prepare build environment
+      run: |
+
+        sudo apt update
+
+        sudo apt install -y \
+          git \
+          curl \
+          wget \
+          aria2
+
+
+
+    - name: Download Armbian build
+      run: |
+
+        git clone \
+          --depth=1 \
+          https://github.com/armbian/build.git \
+          build
+
+
+
+    - name: Copy PiKVM customize script
+      run: |
+
+        mkdir -p build/userpatches
+
+        cp \
+        userpatches/customize-image.sh \
+        build/userpatches/customize-image.sh
+
+
+
+    - name: Build Armbian image
+      id: build
+      run: |
+
+        cd build
+
+
+        ./compile.sh build \
+          BOARD=${BOARD} \
+          BRANCH=${BRANCH} \
+          RELEASE=${RELEASE} \
+          BUILD_MINIMAL=${BUILD_MINIMAL} \
+          BUILD_DESKTOP=${BUILD_DESKTOP} \
+          KERNEL_CONFIGURE=no
+
+
+        echo "status=success" >> $GITHUB_OUTPUT
+
+
+
+    - name: Pack image
+      if: steps.build.outputs.status == 'success'
+      run: |
+
+        cd build/output/images
+
+        tar -Jcvf \
+        /tmp/nanopi_neo2_pikvm.tar.xz \
+        *.img
+
+
+
+    - name: Upload artifact
+      if: steps.build.outputs.status == 'success'
+      uses: actions/upload-artifact@v4
+
+      with:
+
+        name: NanoPi-Neo2-PiKVM
+
+        path: /tmp/nanopi_neo2_pikvm.tar.xz
+
+
+
+    - name: Create release
+      if: steps.build.outputs.status == 'success'
+      uses: softprops/action-gh-release@v2
+
+      with:
+
+        tag_name: nano-${{ github.run_number }}
+
+        files: /tmp/nanopi_neo2_pikvm.tar.xz
+
+      env:
+
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
