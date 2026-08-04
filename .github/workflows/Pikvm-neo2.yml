@@ -1,52 +1,33 @@
 name: Build PiKVM NanoPi Neo2
 
-
 on:
   workflow_dispatch:
-
 
 permissions:
   contents: write
 
-
 env:
-
   BOARD: nanopineo2
   BRANCH: legacy
   RELEASE: jammy
-
   BUILD_MINIMAL: no
   BUILD_DESKTOP: no
   KERNEL_CONFIGURE: no
 
-
 jobs:
-
-
   build:
-
-
     runs-on: ubuntu-22.04
 
-
     steps:
-
-
     - name: Checkout PiKVM_NanoPi-Neo2
       uses: actions/checkout@v4
-
-
 
     - name: Setup QEMU
       uses: docker/setup-qemu-action@v3
 
-
-
     - name: Prepare environment
       run: |
-
         sudo apt update
-
         sudo apt install -y \
           git \
           wget \
@@ -54,42 +35,28 @@ jobs:
           jq \
           aria2
 
-
-
     - name: Download Road-tech Armbian build
       run: |
-
+        # 请确保你的 GitHub 中确实存在该 fork。
+        # 如果你的 fork 叫 build 而不是 armbian-build，请将链接结尾改为 /zrj004/build.git
         git clone \
           --depth=1 \
           https://github.com/zrj004/armbian-build.git \
           build
 
-
-
     - name: Copy PiKVM customize script
       run: |
-
         mkdir -p build/userpatches
-
-
         cp \
           userpatches/customize-image.sh \
           build/userpatches/customize-image.sh
-
-
         chmod +x \
           build/userpatches/customize-image.sh
-
-
 
     - name: Build NanoPi Neo2
       id: build
       run: |
-
-
         cd build
-
-
         ./compile.sh build \
           BOARD=${BOARD} \
           BRANCH=${BRANCH} \
@@ -98,54 +65,28 @@ jobs:
           BUILD_DESKTOP=${BUILD_DESKTOP} \
           KERNEL_CONFIGURE=${KERNEL_CONFIGURE}
 
-
-
         echo "status=success" >> $GITHUB_OUTPUT
-
-
-
 
     - name: Pack image
       if: steps.build.outputs.status == 'success'
       run: |
-
-
         cd build/output/images
-
-
         tar -Jcvf \
           /tmp/NanoPi-Neo2-PiKVM.tar.xz \
           *.img
 
-
-
-
     - name: Upload artifact
       if: steps.build.outputs.status == 'success'
       uses: actions/upload-artifact@v4
-
-
       with:
-
         name: NanoPi-Neo2-PiKVM
-
         path: /tmp/NanoPi-Neo2-PiKVM.tar.xz
-
-
-
 
     - name: Release image
       if: steps.build.outputs.status == 'success'
       uses: softprops/action-gh-release@v2
-
-
       with:
-
         tag_name: NanoPi-${{ github.run_number }}
-
         files: /tmp/NanoPi-Neo2-PiKVM.tar.xz
-
-
       env:
-
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
