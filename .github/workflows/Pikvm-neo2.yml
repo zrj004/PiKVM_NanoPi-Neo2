@@ -37,11 +37,10 @@ jobs:
 
     - name: Download Road-tech Armbian build
       run: |
-        # 请确保你的 GitHub 中确实存在该 fork。
-        # 如果你的 fork 叫 build 而不是 armbian-build，请将链接结尾改为 /zrj004/build.git
+        # 直接拉取 Road-tech 原作者的仓库
         git clone \
           --depth=1 \
-          https://github.com/zrj004/armbian-build.git \
+          https://github.com/Road-tech/armbian-build.git \
           build
 
     - name: Copy PiKVM customize script
