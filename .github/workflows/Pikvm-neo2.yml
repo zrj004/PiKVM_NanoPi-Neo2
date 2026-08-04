@@ -11,14 +11,9 @@ permissions:
 
 env:
 
-  # NanoPi Neo2
   BOARD: nanopineo2
-
-  # 老板稳定内核
   BRANCH: legacy
-
-  # Debian 系
-  RELEASE: bookworm
+  RELEASE: jammy
 
   BUILD_MINIMAL: no
   BUILD_DESKTOP: no
@@ -37,19 +32,17 @@ jobs:
     steps:
 
 
-    # 拉取你的 PiKVM_NanoPi-Neo2 仓库
-    - name: Checkout
+    - name: Checkout PiKVM_NanoPi-Neo2
       uses: actions/checkout@v4
 
 
 
-    # ARM64 模拟支持
     - name: Setup QEMU
       uses: docker/setup-qemu-action@v3
 
 
 
-    - name: Prepare host
+    - name: Prepare environment
       run: |
 
         sudo apt update
@@ -63,23 +56,18 @@ jobs:
 
 
 
-    # 固定 Armbian build 版本
-    - name: Download Armbian build
+    - name: Download Road-tech Armbian build
       run: |
-
 
         git clone \
           --depth=1 \
-          --branch v24.2.3 \
-          https://github.com/armbian/build.git \
+          https://github.com/zrj004/armbian-build.git \
           build
 
 
 
-    # 注入你的 PiKVM 安装脚本
-    - name: Copy customize-image.sh
+    - name: Copy PiKVM customize script
       run: |
-
 
         mkdir -p build/userpatches
 
@@ -94,7 +82,6 @@ jobs:
 
 
 
-    # 编译
     - name: Build NanoPi Neo2
       id: build
       run: |
@@ -118,7 +105,6 @@ jobs:
 
 
 
-    # 打包
     - name: Pack image
       if: steps.build.outputs.status == 'success'
       run: |
@@ -128,13 +114,12 @@ jobs:
 
 
         tar -Jcvf \
-          /tmp/nanopi_neo2_pikvm.tar.xz \
+          /tmp/NanoPi-Neo2-PiKVM.tar.xz \
           *.img
 
 
 
 
-    # Actions附件
     - name: Upload artifact
       if: steps.build.outputs.status == 'success'
       uses: actions/upload-artifact@v4
@@ -144,12 +129,11 @@ jobs:
 
         name: NanoPi-Neo2-PiKVM
 
-        path: /tmp/nanopi_neo2_pikvm.tar.xz
+        path: /tmp/NanoPi-Neo2-PiKVM.tar.xz
 
 
 
 
-    # Release
     - name: Release image
       if: steps.build.outputs.status == 'success'
       uses: softprops/action-gh-release@v2
@@ -157,9 +141,9 @@ jobs:
 
       with:
 
-        tag_name: nano-${{ github.run_number }}
+        tag_name: NanoPi-${{ github.run_number }}
 
-        files: /tmp/nanopi_neo2_pikvm.tar.xz
+        files: /tmp/NanoPi-Neo2-PiKVM.tar.xz
 
 
       env:
