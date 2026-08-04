@@ -11,9 +11,14 @@ permissions:
 
 env:
 
+  # NanoPi Neo2
   BOARD: nanopineo2
+
+  # 老板稳定内核
   BRANCH: legacy
-  RELEASE: jammy
+
+  # Debian 系
+  RELEASE: bookworm
 
   BUILD_MINIMAL: no
   BUILD_DESKTOP: no
@@ -32,18 +37,19 @@ jobs:
     steps:
 
 
-    - name: Checkout PiKVM_NanoPi-Neo2
+    # 拉取你的 PiKVM_NanoPi-Neo2 仓库
+    - name: Checkout
       uses: actions/checkout@v4
 
 
 
-    # Enable ARM64 build support
+    # ARM64 模拟支持
     - name: Setup QEMU
       uses: docker/setup-qemu-action@v3
 
 
 
-    - name: Prepare build host
+    - name: Prepare host
       run: |
 
         sudo apt update
@@ -52,38 +58,44 @@ jobs:
           git \
           wget \
           curl \
-          aria2 \
-          jq
+          jq \
+          aria2
 
 
 
+    # 固定 Armbian build 版本
     - name: Download Armbian build
       run: |
 
+
         git clone \
           --depth=1 \
+          --branch v24.2.3 \
           https://github.com/armbian/build.git \
           build
 
 
 
-    - name: Add PiKVM customize script
+    # 注入你的 PiKVM 安装脚本
+    - name: Copy customize-image.sh
       run: |
+
 
         mkdir -p build/userpatches
 
 
         cp \
-        userpatches/customize-image.sh \
-        build/userpatches/customize-image.sh
+          userpatches/customize-image.sh \
+          build/userpatches/customize-image.sh
 
 
         chmod +x \
-        build/userpatches/customize-image.sh
+          build/userpatches/customize-image.sh
 
 
 
-    - name: Build Armbian NanoPi Neo2
+    # 编译
+    - name: Build NanoPi Neo2
       id: build
       run: |
 
@@ -100,10 +112,13 @@ jobs:
           KERNEL_CONFIGURE=${KERNEL_CONFIGURE}
 
 
+
         echo "status=success" >> $GITHUB_OUTPUT
 
 
 
+
+    # 打包
     - name: Pack image
       if: steps.build.outputs.status == 'success'
       run: |
@@ -118,6 +133,8 @@ jobs:
 
 
 
+
+    # Actions附件
     - name: Upload artifact
       if: steps.build.outputs.status == 'success'
       uses: actions/upload-artifact@v4
@@ -132,7 +149,8 @@ jobs:
 
 
 
-    - name: Create release
+    # Release
+    - name: Release image
       if: steps.build.outputs.status == 'success'
       uses: softprops/action-gh-release@v2
 
